@@ -16,6 +16,25 @@ const routes = [
     name: 'UserCenter',
     component: () => import('../views/UserCenter.vue'),
     meta: { requiresAuth: true }
+  },
+  // 学习模块路由
+  {
+    path: '/courses',
+    name: 'Courses',
+    component: () => import('../views/CourseList.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/course/:id',
+    name: 'CourseDetail',
+    component: () => import('../views/CourseDetail.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/question/:id',
+    name: 'Question',
+    component: () => import('../views/QuestionDetail.vue'),
+    meta: { requiresAuth: false }
   }
 ]
 

@@ -38,7 +38,11 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/v1/user/register",
                     "/v1/user/login",
-                    "/v1/oauth/**"
+                    "/v1/oauth/**",
+                    "/v1/course/categories",
+                    "/v1/course/{id}",
+                    "/v1/question/course/{courseId}",
+                    "/v1/question/{id}"
                 ).permitAll()
                 // 其他接口需要认证
                 .anyRequest().authenticated()

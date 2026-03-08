@@ -15,6 +15,7 @@ import com.cdc.usercenter.service.OAuthService;
 import com.cdc.usercenter.service.TokenService;
 import com.cdc.usercenter.vo.LoginVO;
 import com.cdc.usercenter.vo.OAuthUserVO;
+import com.cdc.usercenter.vo.UserVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
