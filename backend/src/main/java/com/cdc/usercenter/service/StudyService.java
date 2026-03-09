@@ -234,14 +234,16 @@ public class StudyService {
         List<Question> questions = questionMapper.selectList(wrapper);
         
         // 获取用户学习记录
-        Map<Long, UserStudyRecord> recordMap = null;
+        final Map<Long, UserStudyRecord> finalRecordMap;
         if (userId != null && !questions.isEmpty()) {
             List<Long> questionIds = questions.stream().map(Question::getId).collect(Collectors.toList());
-            recordMap = studyRecordMapper.selectList(
+            finalRecordMap = studyRecordMapper.selectList(
                 new LambdaQueryWrapper<UserStudyRecord>()
                     .eq(UserStudyRecord::getUserId, userId)
                     .in(UserStudyRecord::getQuestionId, questionIds)
             ).stream().collect(Collectors.toMap(UserStudyRecord::getQuestionId, r -> r));
+        } else {
+            finalRecordMap = Collections.emptyMap();
         }
         
         // 获取课程名称映射
@@ -249,7 +251,7 @@ public class StudyService {
         
         return questions.stream()
             .map(q -> toQuestionVO(q, courseNameMap.get(q.getCourseId()), 
-                recordMap != null ? recordMap.get(q.getId()) : null, false))
+                finalRecordMap.get(q.getId()), false))
             .collect(Collectors.toList());
     }
     

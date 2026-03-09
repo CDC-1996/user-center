@@ -12,77 +12,73 @@
       <!-- 主内容区 -->
       <el-col :span="18">
         <el-card class="question-card">
-          <!-- 题目标题 -->
-          <div class="question-header">
-            <h1 class="question-title">{{ question.title }}</h1>
-            <div class="question-meta">
-              <el-tag :type="getDifficultyType(question.difficulty)" size="small">
-                {{ getDifficultyText(question.difficulty) }}
-              </el-tag>
-              <el-tag v-for="tag in question.tags" :key="tag" size="small" effect="plain">
-                {{ tag }}
-              </el-tag>
-            </div>
+          <!-- 加载中 -->
+          <div v-if="loading" class="loading-container">
+            <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+            <p>加载中...</p>
           </div>
-
-          <!-- 题目内容 -->
-          <div class="question-content">
-            <h3>📝 题目描述</h3>
-            <p>{{ question.content }}</p>
-          </div>
-
-          <!-- 答案区域 -->
-          <div class="answer-section">
-            <div class="answer-header" @click="showAnswer = !showAnswer">
-              <h3>💡 查看答案</h3>
-              <el-icon :class="{ 'is-rotate': showAnswer }"><ArrowDown /></el-icon>
-            </div>
-            <el-collapse-transition>
-              <div v-show="showAnswer" class="answer-content">
-                <div class="answer-title">答案</div>
-                <div class="markdown-body" v-html="renderMarkdown(question.answer)"></div>
-                
-                <div class="analysis-title">解析</div>
-                <div class="markdown-body" v-html="renderMarkdown(question.analysis)"></div>
+          
+          <template v-else>
+            <!-- 题目标题 -->
+            <div class="question-header">
+              <h1 class="question-title">{{ question.title }}</h1>
+              <div class="question-meta">
+                <el-tag :type="getDifficultyType(question.difficulty)" size="small">
+                  {{ getDifficultyText(question.difficulty) }}
+                </el-tag>
               </div>
-            </el-collapse-transition>
-          </div>
+            </div>
 
-          <!-- 操作按钮 -->
-          <div class="action-buttons">
-            <el-button 
-              :type="question.isCollected ? 'warning' : 'default'"
-              @click="toggleCollect"
-            >
-              {{ question.isCollected ? '⭐ 已收藏' : '☆ 收藏' }}
-            </el-button>
-          </div>
+            <!-- 题目内容 -->
+            <div class="question-content">
+              <h3>📝 题目描述</h3>
+              <div class="content-text" v-html="formatContent(question.content)"></div>
+            </div>
 
-          <!-- 上下题导航 -->
-          <div class="question-nav">
-            <el-button 
-              v-if="question.prevId" 
-              @click="goToQuestion(question.prevId)"
-              :disabled="!question.prevId"
-            >
-              ← 上一题
-            </el-button>
-            <div v-else></div>
-            <el-button 
-              v-if="question.nextId" 
-              @click="goToQuestion(question.nextId)"
-              type="primary"
-            >
-              下一题 →
-            </el-button>
-          </div>
+            <!-- 答案区域 -->
+            <div class="answer-section">
+              <div class="answer-header" @click="showAnswer = !showAnswer">
+                <h3>💡 {{ showAnswer ? '隐藏答案' : '查看答案' }}</h3>
+                <el-icon :class="{ 'is-rotate': showAnswer }"><ArrowDown /></el-icon>
+              </div>
+              <el-collapse-transition>
+                <div v-show="showAnswer" class="answer-content">
+                  <div class="answer-title">答案</div>
+                  <div class="content-text" v-html="formatContent(question.answer)"></div>
+                  
+                  <div class="analysis-title">解析</div>
+                  <div class="content-text" v-html="formatContent(question.analysis)"></div>
+                </div>
+              </el-collapse-transition>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+              <el-button 
+                :type="question.isCollected ? 'warning' : 'default'"
+                @click="toggleCollect"
+              >
+                {{ question.isCollected ? '⭐ 已收藏' : '☆ 收藏' }}
+              </el-button>
+            </div>
+
+            <!-- 上下题导航 -->
+            <div class="question-nav">
+              <el-button @click="goPrev" :disabled="!hasPrev">
+                ← 上一题
+              </el-button>
+              <el-button @click="goNext" type="primary">
+                下一题 →
+              </el-button>
+            </div>
+          </template>
         </el-card>
       </el-col>
 
       <!-- 侧边栏 -->
       <el-col :span="6">
         <el-card class="sidebar-card">
-          <h3>📖 {{ courseName }}</h3>
+          <h3>📖 {{ courseName || '当前课程' }}</h3>
           <div class="course-progress">
             <el-progress :percentage="progress" :stroke-width="8" />
             <p>已完成 {{ completedQuestions }}/{{ totalQuestions }} 题</p>
@@ -93,11 +89,11 @@
           <h3>📊 本题信息</h3>
           <div class="info-item">
             <span>浏览次数</span>
-            <span>{{ question.viewCount }}</span>
+            <span>{{ question.viewCount || 0 }}</span>
           </div>
           <div class="info-item">
             <span>收藏次数</span>
-            <span>{{ question.collectCount }}</span>
+            <span>{{ question.collectCount || 0 }}</span>
           </div>
         </el-card>
       </el-col>
@@ -106,16 +102,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowDown } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowDown, Loading } from '@element-plus/icons-vue'
 import { questionApi, courseApi } from '../api/study'
-import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
 
+const loading = ref(true)
 const question = ref({
   id: null,
   title: '',
@@ -123,24 +119,24 @@ const question = ref({
   answer: '',
   analysis: '',
   difficulty: 2,
-  tags: [],
   viewCount: 0,
   collectCount: 0,
   isViewed: false,
-  isCollected: false,
-  prevId: null,
-  nextId: null
+  isCollected: false
 })
 
 const courseName = ref('')
+const courseId = ref(null)
 const progress = ref(0)
 const completedQuestions = ref(0)
 const totalQuestions = ref(0)
 const showAnswer = ref(false)
+const allQuestions = ref([])
+const currentIndex = ref(-1)
 
 const getDifficultyText = (level) => {
   const texts = { 1: '简单', 2: '中等', 3: '困难' }
-  return texts[level] || '未知'
+  return texts[level] || '中等'
 }
 
 const getDifficultyType = (level) => {
@@ -148,60 +144,97 @@ const getDifficultyType = (level) => {
   return types[level] || 'info'
 }
 
-const renderMarkdown = (text) => {
+const formatContent = (text) => {
   if (!text) return ''
-  return marked(text)
+  // 简单的换行处理
+  return text.replace(/\n/g, '<br>').replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
 }
 
+const hasPrev = computed(() => currentIndex.value > 0)
+
 const loadQuestion = async () => {
+  loading.value = true
+  showAnswer.value = false
+  
   try {
-    const res = await questionApi.getDetail(route.params.id)
-    if (res.data.code === 200) {
-      question.value = res.data.data
-      courseName.value = res.data.data.courseName
+    const data = await questionApi.getDetail(route.params.id)
+    console.log('题目详情:', data)
+    if (data) {
+      question.value = data
+      courseId.value = data.courseId
+      courseName.value = data.courseName || ''
       
-      // 加载课程进度
-      if (res.data.data.courseId) {
-        const courseRes = await courseApi.getDetail(res.data.data.courseId)
-        if (courseRes.data.code === 200) {
-          progress.value = parseFloat(courseRes.data.data.progress) || 0
-          completedQuestions.value = courseRes.data.data.completedQuestions || 0
-          totalQuestions.value = courseRes.data.data.questionCount || 0
-        }
+      // 加载课程信息和题目列表
+      if (data.courseId) {
+        await loadCourseInfo(data.courseId)
+        await loadAllQuestions(data.courseId)
       }
-      
-      // 重置答案显示状态
-      showAnswer.value = false
-    } else {
-      ElMessage.error('题目不存在')
-      router.back()
     }
   } catch (error) {
-    ElMessage.error('加载失败')
+    console.error('加载题目失败:', error)
+    ElMessage.error('加载题目失败')
     router.back()
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadCourseInfo = async (cid) => {
+  try {
+    const data = await courseApi.getDetail(cid)
+    if (data) {
+      courseName.value = data.courseName
+      progress.value = parseFloat(data.progress) || 0
+      completedQuestions.value = data.completedQuestions || 0
+      totalQuestions.value = data.questionCount || 0
+    }
+  } catch (e) {
+    console.log('加载课程信息失败')
+  }
+}
+
+const loadAllQuestions = async (cid) => {
+  try {
+    const data = await questionApi.getByCourse(cid)
+    if (Array.isArray(data)) {
+      allQuestions.value = data
+      currentIndex.value = data.findIndex(q => q.id === parseInt(route.params.id))
+    }
+  } catch (e) {
+    console.log('加载题目列表失败')
   }
 }
 
 const toggleCollect = async () => {
   try {
-    const res = await questionApi.toggleCollect(question.value.id)
-    if (res.data.code === 200) {
-      question.value.isCollected = res.data.data
-      question.value.collectCount += res.data.data ? 1 : -1
-      ElMessage.success(res.data.data ? '收藏成功' : '取消收藏')
-    }
+    const result = await questionApi.toggleCollect(question.value.id)
+    question.value.isCollected = result
+    question.value.collectCount += result ? 1 : -1
+    ElMessage.success(result ? '收藏成功' : '取消收藏')
   } catch (error) {
     ElMessage.error('操作失败')
   }
 }
 
-const goToQuestion = (id) => {
-  router.push(`/question/${id}`)
+const goPrev = () => {
+  if (currentIndex.value > 0) {
+    const prevQ = allQuestions.value[currentIndex.value - 1]
+    router.push(`/question/${prevQ.id}`)
+  }
+}
+
+const goNext = () => {
+  if (currentIndex.value < allQuestions.value.length - 1) {
+    const nextQ = allQuestions.value[currentIndex.value + 1]
+    router.push(`/question/${nextQ.id}`)
+  } else {
+    ElMessage.success('已完成本课程所有题目！')
+  }
 }
 
 const goBack = () => {
-  if (question.value.courseId) {
-    router.push(`/course/${question.value.courseId}`)
+  if (courseId.value) {
+    router.push(`/course/${courseId.value}`)
   } else {
     router.push('/courses')
   }
@@ -212,11 +245,13 @@ onMounted(() => {
 })
 
 // 监听路由变化
-router.afterEach((to) => {
-  if (to.params.id && to.name === 'question') {
+watch(() => route.params.id, (newId) => {
+  if (newId) {
     loadQuestion()
   }
 })
+
+import { computed } from 'vue'
 </script>
 
 <style scoped>
@@ -260,10 +295,26 @@ router.afterEach((to) => {
   margin-bottom: 15px;
 }
 
-.question-content p {
+.content-text {
   color: #606266;
   line-height: 1.8;
   font-size: 16px;
+}
+
+.content-text :deep(pre) {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 15px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.content-text :deep(code) {
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .answer-section {
@@ -309,52 +360,6 @@ router.afterEach((to) => {
   border-top: 1px dashed #dcdfe6;
 }
 
-.markdown-body {
-  line-height: 1.8;
-  color: #606266;
-}
-
-.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) {
-  color: #303133;
-  margin: 20px 0 10px;
-}
-
-.markdown-body :deep(code) {
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: monospace;
-}
-
-.markdown-body :deep(pre) {
-  background: #282c34;
-  color: #abb2bf;
-  padding: 15px;
-  border-radius: 8px;
-  overflow-x: auto;
-}
-
-.markdown-body :deep(pre code) {
-  background: transparent;
-  padding: 0;
-}
-
-.markdown-body :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 15px 0;
-}
-
-.markdown-body :deep(th), .markdown-body :deep(td) {
-  border: 1px solid #dcdfe6;
-  padding: 10px;
-  text-align: left;
-}
-
-.markdown-body :deep(th) {
-  background: #f5f7fa;
-}
-
 .action-buttons {
   margin-bottom: 20px;
   padding-top: 20px;
@@ -393,5 +398,11 @@ router.afterEach((to) => {
 
 .info-item:last-child {
   border-bottom: none;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 50px;
+  color: #909399;
 }
 </style>

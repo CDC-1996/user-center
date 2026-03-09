@@ -58,7 +58,7 @@ public class StudyController {
      * 记录学习时长
      */
     @PostMapping("/time")
-    public Result<Void> recordStudyTime(
+    public Result<String> recordStudyTime(
             @RequestParam Long questionId,
             @RequestParam Integer studyTime,
             @AuthenticationPrincipal Long userId) {
