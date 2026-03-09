@@ -137,9 +137,28 @@ npm run dev
 - [x] 项目结构搭建
 - [x] Docker环境配置
 - [x] 数据库设计
-- [ ] 后端代码开发
-- [ ] 前端页面开发
-- [ ] 测试与部署
+- [x] 后端代码开发
+- [x] 前端页面开发
+- [x] 测试与部署
+
+## 🚀 快速体验
+
+```bash
+# 1. 启动基础设施
+docker compose up -d mysql redis
+
+# 2. 启动后端
+cd backend && java -jar target/user-center-1.0.0.jar
+
+# 3. 启动前端
+cd frontend && npm run dev
+```
+
+访问: http://localhost:5173
+
+## 📚 文档
+
+- [总体设计文档](docs/design.md)
 
 ---
 
