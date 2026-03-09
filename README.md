@@ -139,7 +139,51 @@ npm run dev
 - [x] 数据库设计
 - [x] 后端代码开发
 - [x] 前端页面开发
-- [x] 测试与部署
+- [x] 学习模块开发
+- [ ] 测试与部署
+
+## 📖 学习模块
+
+### 功能列表
+
+| 功能 | 说明 | 状态 |
+|------|------|------|
+| 课程浏览 | 按分类浏览课程 | ✅ |
+| 题目学习 | 查看题目、答案、解析 | ✅ |
+| 随机刷题 | 按条件随机抽题练习 | ✅ |
+| 收藏题目 | 收藏重点题目 | ✅ |
+| 错题本 | 标记需要复习的题目 | ✅ |
+| 学习进度 | 跟踪课程学习进度 | ✅ |
+| 学习统计 | 每日/每周学习数据 | ✅ |
+| 继续学习 | 从上次位置继续 | ✅ |
+
+### 学习模块API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /v1/course/categories | 获取课程分类列表 |
+| GET | /v1/course/{id} | 获取课程详情 |
+| GET | /v1/question/course/{courseId} | 获取课程题目列表 |
+| GET | /v1/question/{id} | 获取题目详情 |
+| POST | /v1/question/{id}/collect | 收藏/取消收藏 |
+| GET | /v1/study/stats | 获取学习统计 |
+| GET | /v1/study/progress | 获取学习进度 |
+| GET | /v1/study/random | 随机刷题 |
+| GET | /v1/study/search | 搜索题目 |
+| POST | /v1/study/{id}/review | 加入/移出错题本 |
+| GET | /v1/study/review | 获取错题本列表 |
+| POST | /v1/study/time | 记录学习时长 |
+
+### 学习模块数据库表
+
+| 表名 | 说明 |
+|------|------|
+| course_category | 课程分类表 |
+| course | 课程表 |
+| question | 题目表 |
+| user_study_record | 用户学习记录表 |
+| user_course_progress | 用户课程进度表 |
+| user_study_stats | 用户学习统计表 |
 
 ## 🚀 快速体验
 

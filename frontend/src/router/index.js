@@ -35,6 +35,25 @@ const routes = [
     name: 'Question',
     component: () => import('../views/QuestionDetail.vue'),
     meta: { requiresAuth: false }
+  },
+  // 新增学习功能路由
+  {
+    path: '/random',
+    name: 'RandomPractice',
+    component: () => import('../views/RandomPractice.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/review',
+    name: 'ReviewList',
+    component: () => import('../views/ReviewList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/stats',
+    name: 'StudyStats',
+    component: () => import('../views/StudyStats.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

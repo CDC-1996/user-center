@@ -23,6 +23,8 @@ public class UserStudyRecord {
     
     private Integer isCollected;
     
+    private Integer needReview;  // 是否需要复习（错题本）
+    
     private Integer studyTime;
     
     @TableField(fill = FieldFill.INSERT)

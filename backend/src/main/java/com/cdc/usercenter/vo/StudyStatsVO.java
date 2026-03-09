@@ -16,4 +16,8 @@ public class StudyStatsVO {
     private Integer totalQuestions;
     private Integer totalCourses;
     private Integer completedCourses;
+    
+    // 收藏和错题
+    private Integer collectCount;   // 收藏题目数
+    private Integer reviewCount;    // 错题本数量
 }

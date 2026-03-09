@@ -22,6 +22,7 @@ public class QuestionVO {
     // 用户相关
     private Boolean isViewed;
     private Boolean isCollected;
+    private Boolean needReview;  // 是否需要复习（错题本）
     
     // 导航
     private Long prevId;
