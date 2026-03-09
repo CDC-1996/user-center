@@ -23,7 +23,7 @@
             </div>
             <div class="course-stats">
               <div class="stat-item">
-                <span class="stat-value">{{ course.questionCount }}</span>
+                <span class="stat-value">{{ course.questionCount || 0 }}</span>
                 <span class="stat-label">题目总数</span>
               </div>
               <div class="stat-item">
@@ -43,14 +43,19 @@
         <el-card class="question-list-card">
           <template #header>
             <div class="list-header">
-              <span>题目列表</span>
+              <span>题目列表 ({{ questions.length }}题)</span>
               <el-button type="primary" size="small" @click="startStudy" v-if="questions.length > 0">
                 {{ course.isStarted ? '继续学习' : '开始学习' }}
               </el-button>
             </div>
           </template>
 
-          <el-table :data="questions" style="width: 100%" @row-click="goToQuestion">
+          <div v-if="loading" class="loading-container">
+            <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+            <p>加载中...</p>
+          </div>
+
+          <el-table v-else :data="questions" style="width: 100%" @row-click="goToQuestion">
             <el-table-column type="index" label="#" width="50" />
             <el-table-column prop="title" label="题目标题" min-width="300">
               <template #default="{ row }">
@@ -78,7 +83,7 @@
           </el-table>
 
           <!-- 分页 -->
-          <div class="pagination-wrapper">
+          <div class="pagination-wrapper" v-if="total > pageSize">
             <el-pagination
               v-model:current-page="currentPage"
               :page-size="pageSize"
@@ -96,7 +101,7 @@
           <h3>📖 课程信息</h3>
           <div class="info-item">
             <span>分类</span>
-            <span>{{ course.categoryName }}</span>
+            <span>{{ course.categoryName || '未分类' }}</span>
           </div>
           <div class="info-item">
             <span>难度</span>
@@ -106,7 +111,7 @@
           </div>
           <div class="info-item">
             <span>题目数</span>
-            <span>{{ course.questionCount }}</span>
+            <span>{{ course.questionCount || 0 }}</span>
           </div>
         </el-card>
 
@@ -117,7 +122,7 @@
               <span class="percentage-value">{{ percentage }}%</span>
             </template>
           </el-progress>
-          <p class="progress-text">已完成 {{ course.completedQuestions }} 题</p>
+          <p class="progress-text">已完成 {{ course.completedQuestions || 0 }} 题</p>
         </el-card>
       </el-col>
     </el-row>
@@ -128,12 +133,13 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Loading } from '@element-plus/icons-vue'
 import { courseApi, questionApi } from '../api/study'
 
 const route = useRoute()
 const router = useRouter()
 
+const loading = ref(true)
 const course = ref({
   id: null,
   courseName: '',
@@ -153,7 +159,7 @@ const total = ref(0)
 
 const getDifficultyText = (level) => {
   const texts = { 1: '入门', 2: '进阶', 3: '高级' }
-  return texts[level] || '未知'
+  return texts[level] || '入门'
 }
 
 const getDifficultyType = (level) => {
@@ -163,28 +169,35 @@ const getDifficultyType = (level) => {
 
 const loadCourse = async () => {
   try {
-    const res = await courseApi.getDetail(route.params.id)
-    if (res.data.code === 200) {
-      course.value = res.data.data
-    } else {
-      ElMessage.error('课程不存在')
-      router.push('/courses')
+    const data = await courseApi.getDetail(route.params.id)
+    console.log('课程详情:', data)
+    if (data) {
+      course.value = data
     }
   } catch (error) {
-    ElMessage.error('加载失败')
+    console.error('加载课程失败:', error)
+    ElMessage.error('加载课程失败')
     router.push('/courses')
   }
 }
 
 const loadQuestions = async () => {
   try {
-    const res = await questionApi.getByCourse(route.params.id, currentPage.value, pageSize.value)
-    if (res.data.code === 200) {
-      questions.value = res.data.data.records
-      total.value = res.data.data.total
+    loading.value = true
+    const data = await questionApi.getByCourse(route.params.id, currentPage.value, pageSize.value)
+    console.log('题目列表:', data)
+    if (Array.isArray(data)) {
+      questions.value = data
+      total.value = data.length
+    } else if (data && data.records) {
+      questions.value = data.records
+      total.value = data.total
     }
   } catch (error) {
+    console.error('加载题目失败:', error)
     ElMessage.error('加载题目列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -331,5 +344,11 @@ onMounted(() => {
   text-align: center;
   color: #909399;
   margin-top: 10px;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 50px;
+  color: #909399;
 }
 </style>

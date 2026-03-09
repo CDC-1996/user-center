@@ -1,33 +1,33 @@
 <template>
   <div class="course-list">
     <div class="page-header">
-      <h1>📚 Java学习中心</h1>
-      <p>系统学习Java核心技术，助力面试通关</p>
+      <h1>📚 面试学习中心</h1>
+      <p>系统学习核心技术，助力面试通关</p>
     </div>
 
     <!-- 学习统计卡片 -->
     <el-row :gutter="20" class="stats-row">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-number">{{ stats.totalQuestions }}</div>
+          <div class="stat-number">{{ stats.totalQuestions || 0 }}</div>
           <div class="stat-label">已学习题目</div>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-number">{{ stats.todayQuestions }}</div>
+          <div class="stat-number">{{ stats.todayQuestions || 0 }}</div>
           <div class="stat-label">今日学习</div>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-number">{{ stats.totalCourses }}</div>
+          <div class="stat-number">{{ stats.totalCourses || 0 }}</div>
           <div class="stat-label">学习课程</div>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-number">{{ Math.floor(stats.totalTime / 60) }}</div>
+          <div class="stat-number">{{ Math.floor((stats.totalTime || 0) / 60) }}</div>
           <div class="stat-label">学习时长(分)</div>
         </el-card>
       </el-col>
@@ -38,6 +38,7 @@
       <h2 class="category-title">
         <span class="category-icon">{{ getCategoryIcon(category.categoryCode) }}</span>
         {{ category.categoryName }}
+        <span class="course-count">{{ category.courses?.length || 0 }}门课程</span>
       </h2>
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="course in category.courses" :key="course.id">
@@ -46,13 +47,13 @@
               <span class="difficulty-tag" :class="getDifficultyClass(course.difficulty)">
                 {{ getDifficultyText(course.difficulty) }}
               </span>
-              <span class="question-count">{{ course.questionCount }}题</span>
+              <span class="question-count">{{ course.questionCount || 0 }}题</span>
             </div>
             <h3 class="course-name">{{ course.courseName }}</h3>
             <p class="course-desc">{{ course.description }}</p>
             <div class="course-progress" v-if="course.isStarted">
-              <el-progress :percentage="course.progress" :stroke-width="6" />
-              <span class="progress-text">已学习 {{ course.completedQuestions }}/{{ course.questionCount }}</span>
+              <el-progress :percentage="course.progress || 0" :stroke-width="6" />
+              <span class="progress-text">已学习 {{ course.completedQuestions || 0 }}/{{ course.questionCount || 0 }}</span>
             </div>
             <div class="course-progress" v-else>
               <span class="not-started">未开始学习</span>
@@ -61,6 +62,15 @@
         </el-col>
       </el-row>
     </div>
+    
+    <!-- 空状态 -->
+    <el-empty v-if="!loading && categories.length === 0" description="暂无课程数据" />
+    
+    <!-- 加载中 -->
+    <div v-if="loading" class="loading-container">
+      <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+      <p>加载中...</p>
+    </div>
   </div>
 </template>
 
@@ -68,10 +78,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import { courseApi, studyApi } from '../api/study'
 
 const router = useRouter()
 const categories = ref([])
+const loading = ref(true)
 const stats = ref({
   totalQuestions: 0,
   todayQuestions: 0,
@@ -87,19 +99,25 @@ const getCategoryIcon = (code) => {
     'spring': '🌱',
     'mysql': '🗄️',
     'redis': '⚡',
-    'distributed': '🌐'
+    'distributed': '🌐',
+    'network': '🔌',
+    'os': '💾',
+    'linux': '🐧',
+    'system-design': '🏗️',
+    'frontend-basic': '🎨',
+    'frontend-framework': '⚛️'
   }
   return icons[code] || '📖'
 }
 
 const getDifficultyText = (level) => {
   const texts = { 1: '入门', 2: '进阶', 3: '高级' }
-  return texts[level] || '未知'
+  return texts[level] || '入门'
 }
 
 const getDifficultyClass = (level) => {
   const classes = { 1: 'easy', 2: 'medium', 3: 'hard' }
-  return classes[level] || ''
+  return classes[level] || 'easy'
 }
 
 const goToCourse = (courseId) => {
@@ -107,21 +125,29 @@ const goToCourse = (courseId) => {
 }
 
 const loadData = async () => {
+  loading.value = true
   try {
-    const [catRes, statsRes] = await Promise.all([
-      courseApi.getCategories(),
-      studyApi.getStats()
-    ])
-    if (catRes.data.code === 200) {
-      categories.value = catRes.data.data
+    // 加载课程分类
+    const catData = await courseApi.getCategories()
+    console.log('课程数据:', catData)
+    if (Array.isArray(catData)) {
+      categories.value = catData
     }
-    if (statsRes.data.code === 200) {
-      stats.value = statsRes.data.data
+    
+    // 尝试加载学习统计（可能需要登录）
+    try {
+      const statsData = await studyApi.getStats()
+      if (statsData) {
+        stats.value = statsData
+      }
+    } catch (e) {
+      console.log('学习统计加载失败，可能未登录')
     }
   } catch (error) {
-    if (error.response?.status !== 401) {
-      ElMessage.error('加载数据失败')
-    }
+    console.error('加载数据失败:', error)
+    ElMessage.error('加载数据失败: ' + error.message)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -182,10 +208,19 @@ onMounted(() => {
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 2px solid #409EFF;
+  display: flex;
+  align-items: center;
 }
 
 .category-icon {
   margin-right: 10px;
+}
+
+.course-count {
+  font-size: 14px;
+  color: #909399;
+  margin-left: auto;
+  font-weight: normal;
 }
 
 .course-card {
@@ -260,5 +295,11 @@ onMounted(() => {
 .not-started {
   color: #c0c4cc;
   font-size: 14px;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 50px;
+  color: #909399;
 }
 </style>
